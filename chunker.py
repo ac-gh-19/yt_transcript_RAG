@@ -86,3 +86,58 @@ def chunk_by_token_budget(
             i = j
 
     return chunks
+
+def chunk_by_token_budget_no_overlap(
+    segments: List[Dict[str, Any]],
+    max_tokens: int = 500,
+) -> List[Dict[str, Any]]:
+    if max_tokens <= 0:
+        raise ValueError("max_tokens must be > 0")
+
+    chunks = []
+    n = len(segments)
+    i = 0
+    chunk_id = 0
+
+    while i < n:
+        start_i = i
+        token_sum = 0
+        j = i
+
+        while j < n:
+            text_j = (segments[j].get("text") or "").strip()
+            seg_tokens = estimate_tokens(text_j)
+
+            # force single huge segment into its own chunk
+            if j == start_i and seg_tokens > max_tokens:
+                token_sum = seg_tokens
+                j += 1
+                break
+
+            if token_sum + seg_tokens <= max_tokens:
+                token_sum += seg_tokens
+                j += 1
+            else:
+                break
+
+        if j == start_i:
+            j = min(start_i + 1, n)
+
+        chunk_segs = segments[start_i:j]
+        chunk_text = " ".join((s.get("text") or "").strip() for s in chunk_segs).strip()
+
+        chunk_start = float(min(s["start"] for s in chunk_segs))
+        chunk_end = float(max(s["end"] for s in chunk_segs))
+
+        chunks.append({
+            "chunk_id": chunk_id,
+            "text": chunk_text,
+            "start": chunk_start,
+            "end": chunk_end,
+            "segment_range": (start_i, j - 1),
+            "token_estimate": token_sum,
+        })
+        chunk_id += 1
+        i = j  # ✅ no overlap
+
+    return chunks

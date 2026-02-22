@@ -13,7 +13,7 @@ if __name__ == "__main__":
     init_db()
 
     url = "https://www.youtube.com/watch?v=UCP_be8pT50"
-    query = "What should I do when I face procrastination?"
+    query = "wants to avoid discomfort"
 
     # chunking config
     chunker_name = "token_budget"
@@ -61,3 +61,21 @@ if __name__ == "__main__":
         print(f"{rank}. score={score:.4f}  [{fmt_time(c['start'])}-{fmt_time(c['end'])}]  chunk_id={c['chunk_id']}")
         print("   ", c["text"].replace("\n", " "))
         print()
+
+    top_two_chunks = top[:1]
+    chunk_segments = []
+    for rank, (idx, score) in enumerate(top_two_chunks, 1):
+        chunk = chunks[idx]
+        startIdx = chunk["segment_range"][0]
+        endIdx = chunk["segment_range"][1]
+        for i in range(startIdx, endIdx + 1):
+            seg = segments[i]
+            chunk_segments.append(seg)
+            print(f"  {rank}.{i-startIdx+1} [{fmt_time(seg['start'])}-{fmt_time(seg['end'])}] {seg['text']}")
+
+    embedded_chunk_segments = embed_texts([s["text"] for s in chunk_segments])
+    top_chunk_segments = cosine_top_k(query_vec, embedded_chunk_segments, k=3)
+    print("\nMost relevant segments within top chunk:")
+    for rank, (idx, score) in enumerate(top_chunk_segments, 1):
+        seg = chunk_segments[idx]
+        print(f"  {rank}. score={score:.4f} [{fmt_time(seg['start'])}-{fmt_time(seg['end'])}] {seg['text']}")

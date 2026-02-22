@@ -44,10 +44,12 @@ def fetch_transcript(url: str):
     transcript = ytt_api.fetch(video_id)
 
     normalized = []
-    for snippet in transcript.snippets:
+    currTime = 0.0
+    for idx, snippet in enumerate(transcript.snippets):
         start = snippet.start
         duration = snippet.duration
         text = snippet.text
+        # print(f"Fetched snippet {idx}: start={start}, duration={duration}, text={text}")
 
         normalized.append({
             "start": start,
